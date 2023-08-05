@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Screenshot",
+  "version": "1.0",
+  "description": "Screenshot every second",
+  "permissions": [
+    "storage",
+    "scripting",
+    "activeTab",
+    "tabs"
+  ],
+  "action": {
+    "default_title": "Screenshot",
+    "default_icon": "icon.png"
+  },
+  "icons": {
+    "48": "icon.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "html2canvas.min.js",
+        "content.js"
+      ]
+    }
+  ]
+}
