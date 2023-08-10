@@ -3,8 +3,8 @@ var offsetY = 0;
 var intervalId;
 var isDrawing = false;
 var hasScreenshot = !!intervalId;
+var current_url = null;
 chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
-
     var isEnabled = msg.text === 'enabled';
     var overlay = document.getElementById("fake-screenshot-overlay");
     var buttons = document.getElementById("fake-screenshot-buttons");
@@ -117,10 +117,7 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
         hasScreenshot = true;
         var screenshotData = JSON.parse(localStorage.getItem("screenshotData"));
         if (screenshotData) {
-            // Вызываем функцию для создания скриншота обозначенной области
-            // var overlay = document.getElementById("fake-screenshot-overlay");
-            // var screenshotBtn = overlay.querySelector("button#fake-screenshot-screenshotBtn")
-
+            current_url = window.location.href;
             if (screenshotBtn) screenshotBtn.style.display = "none";
             if (intervalId) clearTimeout(intervalId);
 
@@ -174,6 +171,7 @@ function captureScreenshot(x, y, width, height) {
         height: height,
     }).then(function (canvas) {
         var imgURL = canvas.toDataURL("image/jpeg", 0.1);
-        chrome.runtime.sendMessage({img:imgURL}, (captured) => {});
+        chrome.runtime.sendMessage({img: imgURL, current_url: current_url}, (captured) => {
+        });
     });
 }

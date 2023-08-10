@@ -7,7 +7,6 @@ chrome.action.onClicked.addListener(function (tab) {
     chrome.storage.sync.get('enabled', function (data) {
         const isEnabled = data.enabled !== false;
         chrome.tabs.sendMessage(tab.id, {text: isEnabled ? 'enabled' : 'disabled'});
-
         chrome.storage.sync.set({enabled: !isEnabled});
         return false;
     });
@@ -15,15 +14,15 @@ chrome.action.onClicked.addListener(function (tab) {
 });
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-    if (request.img) sendImg(request.img).then(r => {
-        console.log(r);
-    });
+    if (request.img) {
+        sendImg({img: request.img, current_url: request.current_url}).then(r => {
+            console.log(r);
+        });
+    }
     sendResponse();
 });
 
-async function sendImg(img) {
-    const data = {img: img};
-
+async function sendImg(data = {}) {
     try {
         if (!SCREENSHOT_SEND_URL) {
             throw "SCREENSHOT_SEND_URL not set"
