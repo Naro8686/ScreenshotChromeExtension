@@ -37,7 +37,15 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
         screenshotBtn = document.createElement("button");
         screenshotBtn.id = "fake-screenshot-screenshotBtn";
         screenshotBtn.textContent = "Сделать скриншот";
-        screenshotBtn.style.cssText = "margin-right: 10px;";
+        screenshotBtn.style.cssText = "margin-right: 10px;" +
+            "  background-color: white; \n" +
+            "  color: black; \n" +
+            "  border: 1px solid;" +
+            "  text-align: center;\n" +
+            "  text-decoration: none;\n" +
+            "  cursor: pointer;" +
+            "  padding: 5px;" +
+            "  margin-bottom: 5px;";
         buttons.appendChild(screenshotBtn);
     }
     var cancelBtn = buttons.querySelector("button#fake-screenshot-cancelBtn");
@@ -45,7 +53,14 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
         cancelBtn = document.createElement("button");
         cancelBtn.id = "fake-screenshot-cancelBtn";
         cancelBtn.textContent = "Отменить действие";
-        cancelBtn.style.cssText = "margin-right: 10px;";
+        cancelBtn.style.cssText = "margin-right: 10px;" +
+            "  background-color: white; \n" +
+            "  color: black; \n" +
+            "  border: 1px solid;" +
+            "  text-align: center;\n" +
+            "  text-decoration: none;\n" +
+            "  cursor: pointer;" +
+            "  padding: 5px;";
         buttons.appendChild(cancelBtn);
     }
 
@@ -61,6 +76,8 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
 
         // Назначаем обработчик события для начала рисования
         overlay.addEventListener("mousedown", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
             if (e.target === screenshotBtn || e.target === cancelBtn || hasScreenshot) {
                 return false;
             }
