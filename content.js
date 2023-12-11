@@ -4,6 +4,9 @@ var intervalId;
 var isDrawing = false;
 var hasScreenshot = !!intervalId;
 var current_url = null;
+if (performance.navigation.type === performance.navigation.TYPE_RELOAD) {
+    switcher(false);
+}
 chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
     var isEnabled = msg.text === 'enabled';
     var overlay = document.getElementById("fake-screenshot-overlay");
@@ -64,8 +67,6 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
         buttons.appendChild(cancelBtn);
     }
 
-
-    // chrome.storage.sync.set({enabled: isEnabled});
     if (isEnabled) {
         var ctx = canvas.getContext("2d", {willReadFrequently: true});
         var startX, startY;
@@ -94,8 +95,12 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
             var currentY = e.clientY - offsetY;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.strokeStyle = "red";
+            ctx.shadowColor = "#000000";
+            ctx.shadowBlur = 20;
+            ctx.lineJoin = "round";
             ctx.lineWidth = 2;
             ctx.strokeRect(startX, startY, currentX - startX, currentY - startY);
+            ctx.clearRect(startX, startY, currentX - startX, currentY - startY);
 
             // Показываем кнопки скриншота и отмены действий
             buttons.style.display = "block";
@@ -142,7 +147,7 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
                 if (overlay) overlay.style.display = "none";
                 captureScreenshot(screenshotData.x, screenshotData.y, screenshotData.width, screenshotData.height);
                 if (overlay) overlay.style.display = "block";
-            }, 1500)
+            }, 2000)
         }
         return false;
     });
@@ -154,11 +159,13 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         screenshotBtn.style.display = 'inline-block';
         buttons.style.display = "none";
-        // overlay.style.display = "none";
+        overlay.style.display = "none";
         // Очищаем данные об отмеченной области
         localStorage.removeItem("screenshotData");
         if (intervalId) clearTimeout(intervalId);
         hasScreenshot = false;
+        isEnabled = false;
+        switcher(isEnabled);
         return false;
     });
 
@@ -188,7 +195,10 @@ function captureScreenshot(x, y, width, height) {
         height: height,
     }).then(function (canvas) {
         var imgURL = canvas.toDataURL("image/jpeg", 0.1);
-        chrome.runtime.sendMessage({img: imgURL, current_url: current_url}, (captured) => {
-        });
+        chrome.runtime.sendMessage({img: imgURL, current_url: current_url});
     });
+}
+
+function switcher(enabled) {
+    chrome.runtime.sendMessage({enabled: enabled});
 }
