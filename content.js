@@ -7,23 +7,27 @@ var current_url = null;
 if (performance.navigation.type === performance.navigation.TYPE_RELOAD) {
     switcher(false);
 }
-chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
-    var isEnabled = msg.text === 'enabled';
+
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+    var tabId = sender.tab?.id;
+    var isEnabled = request.text === 'enabled';
     var overlay = document.getElementById("fake-screenshot-overlay");
+    var searchBlock = document.getElementById("fake-search-block");
     var buttons = document.getElementById("fake-screenshot-buttons");
     if (!overlay) {
         overlay = document.createElement("div");
         overlay.id = 'fake-screenshot-overlay';
-        overlay.style.cssText = 'position: fixed;\n' +
-            '            top: 0;\n' +
-            '            left: 0;\n' +
-            '            width: 100%;\n' +
-            '            height: 100%;\n' +
-            '            background-color: rgba(0, 0, 0, 0.5);\n' +
-            '            z-index: 999999;' +
-            '            cursor: crosshair;';
+        overlay.style.cssText = 'display: none;\n' + 'position: fixed;\n' + '            top: 0;\n' + '            left: 0;\n' + '            width: 100%;\n' + '            height: 100%;\n' + '            background-color: rgba(0, 0, 0, 0.5);\n' + '            z-index: 999999;' + '            cursor: crosshair;';
         document.body.appendChild(overlay);
     }
+    overlay.style.display = isEnabled ? "block" : "none";
+    if (!searchBlock) {
+        searchBlock = document.createElement("div");
+        searchBlock.id = "fake-search-block";
+        searchBlock.style.cssText = 'display: none;\n' + '    position: absolute;\n' + '    z-index: 1000000;\n' + '    display: block;\n' + '    right: 5px;\n' + '    top: 5px;\n' + '    background: #a4b8c1;\n' + '    border: 1px #646262 solid;\n' + '    padding: 10px;\n' + '    border-radius: 3px;' + '    cursor: default;' + '    width: 250px;' + '';
+        document.body.appendChild(searchBlock);
+    }
+    searchBlock.style.display = isEnabled ? "block" : "none";
     if (!buttons) {
         buttons = document.createElement("div");
         buttons.id = "fake-screenshot-buttons";
@@ -35,20 +39,28 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
         canvas = document.createElement("canvas");
         overlay.appendChild(canvas);
     }
+    var searchInput = searchBlock.querySelector("input#fake-search-input");
+    if (!searchInput) {
+        searchInput = document.createElement("input");
+        searchInput.type = "search";
+        searchInput.id = "fake-search-input";
+        searchInput.placeholder = "Напишите трек ид";
+        searchInput.style.cssText = "  width: 100%; \n" + "  background-color: white; \n" + "  color: black; \n" + "  border: 1px solid;" + "  padding: 5px;";
+        searchBlock.appendChild(searchInput);
+    }
+    var trackIdsBlock = searchBlock.querySelector("#fake-track-ids-block");
+    if (!trackIdsBlock) {
+        trackIdsBlock = document.createElement("div");
+        trackIdsBlock.id = "fake-track-ids-block";
+        trackIdsBlock.style.cssText = "width: 100%;margin-top: 15px;";
+        searchBlock.appendChild(trackIdsBlock);
+    }
     var screenshotBtn = buttons.querySelector("button#fake-screenshot-screenshotBtn");
     if (!screenshotBtn) {
         screenshotBtn = document.createElement("button");
         screenshotBtn.id = "fake-screenshot-screenshotBtn";
         screenshotBtn.textContent = "Сделать скриншот";
-        screenshotBtn.style.cssText = "margin-right: 10px;" +
-            "  background-color: white; \n" +
-            "  color: black; \n" +
-            "  border: 1px solid;" +
-            "  text-align: center;\n" +
-            "  text-decoration: none;\n" +
-            "  cursor: pointer;" +
-            "  padding: 5px;" +
-            "  margin-bottom: 5px;";
+        screenshotBtn.style.cssText = "margin-right: 10px;" + "  background-color: white; \n" + "  color: black; \n" + "  border: 1px solid;" + "  text-align: center;\n" + "  text-decoration: none;\n" + "  cursor: pointer;" + "  padding: 5px;" + "  margin-bottom: 5px;";
         buttons.appendChild(screenshotBtn);
     }
     var cancelBtn = buttons.querySelector("button#fake-screenshot-cancelBtn");
@@ -56,14 +68,7 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
         cancelBtn = document.createElement("button");
         cancelBtn.id = "fake-screenshot-cancelBtn";
         cancelBtn.textContent = "Отменить действие";
-        cancelBtn.style.cssText = "margin-right: 10px;" +
-            "  background-color: white; \n" +
-            "  color: black; \n" +
-            "  border: 1px solid;" +
-            "  text-align: center;\n" +
-            "  text-decoration: none;\n" +
-            "  cursor: pointer;" +
-            "  padding: 5px;";
+        cancelBtn.style.cssText = "margin-right: 10px;" + "  background-color: white; \n" + "  color: black; \n" + "  border: 1px solid;" + "  text-align: center;\n" + "  text-decoration: none;\n" + "  cursor: pointer;" + "  padding: 5px;";
         buttons.appendChild(cancelBtn);
     }
 
@@ -77,11 +82,11 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
 
         // Назначаем обработчик события для начала рисования
         overlay.addEventListener("mousedown", function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            if (e.target === screenshotBtn || e.target === cancelBtn || hasScreenshot) {
+            if (e.target === screenshotBtn || e.target === cancelBtn || e.target.parentNode === searchBlock || hasScreenshot) {
                 return false;
             }
+            e.preventDefault();
+            e.stopPropagation();
             isDrawing = true;
             startX = e.clientX - offsetX;
             startY = e.clientY - offsetY;
@@ -120,10 +125,7 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
 
             var screenshotData = JSON.parse(localStorage.getItem("screenshotData"));
             if (!screenshotData) screenshotData = {
-                x: Math.min(startX, endX),
-                y: Math.min(startY, endY),
-                width: Math.abs(width),
-                height: Math.abs(height)
+                x: Math.min(startX, endX), y: Math.min(startY, endY), width: Math.abs(width), height: Math.abs(height)
             };
             localStorage.setItem("screenshotData", JSON.stringify(screenshotData));
         });
@@ -133,9 +135,16 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
         hasScreenshot = false;
     }
 
+    searchInput.addEventListener('keypress', addTrackId);
+
     screenshotBtn.addEventListener("click", function (e) {
         e.preventDefault();
         e.stopPropagation();
+        searchInput.style.border = '1px solid';
+        if (!getTrackIds().length) {
+            searchInput.style.border = '1px solid red';
+            return false;
+        }
         hasScreenshot = true;
         var screenshotData = JSON.parse(localStorage.getItem("screenshotData"));
         if (screenshotData) {
@@ -189,16 +198,66 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
 
 function captureScreenshot(x, y, width, height) {
     return html2canvas(document.body, {
-        x: x + offsetX,
-        y: y + offsetY,
-        width: width,
-        height: height,
+        x: x + offsetX, y: y + offsetY, width: width, height: height,
     }).then(function (canvas) {
         var imgURL = canvas.toDataURL("image/jpeg", 0.1);
-        chrome.runtime.sendMessage({img: imgURL, current_url: current_url});
+        chrome.runtime.sendMessage({img: imgURL, current_url: current_url, track_ids: getTrackIds()});
     });
+}
+
+function getTrackIds() {
+    let trackIds = [];
+    let trackIdItem = document.querySelectorAll('.track-id-item');
+    if (trackIdItem.length) {
+        trackIdItem.forEach((node) => {
+            let trackId = node.textContent;
+            trackId = trackId.substring(0, trackId.length - 1);
+            trackIds.push(trackId)
+        });
+    }
+    return trackIds;//JSON.stringify(tags)
 }
 
 function switcher(enabled) {
     chrome.runtime.sendMessage({enabled: enabled});
 }
+
+function addTrackId(e) {
+    if (e.keyCode < 48 || e.keyCode > 57) {
+        e.preventDefault();
+    }
+    if (e.target?.id === 'fake-search-input' && (e.which === 13 || e.keyCode === 13)) {
+        if (e.target?.value) {
+            let trackId = e.target.value.replace(/\s*$/, "").toLowerCase();
+            let trackIdItem = document.createElement('div');
+            trackIdItem.className = 'track-id-item'
+            trackIdItem.style.cssText = 'display: inline-block;\n' +
+                '    height: 30px;\n' +
+                '    font-size: 11px;\n' +
+                '    line-height: 30px;\n' +
+                '    background-color: rgb(234, 234, 234);\n' +
+                '    padding: 0px 15px;\n' +
+                '    border-radius: 25px;\n' +
+                '    margin: 3px;';
+            trackIdItem.innerHTML = `${trackId}<span class="remove-track-id" style="
+                padding-left: 13px;color: rgb(136, 136, 136);
+                font-weight: 100;
+                float: right;
+                font-size: 18px;
+                cursor: pointer;">&times;</span>`;
+            document.querySelectorAll('.track-id-item').forEach(function (t) {
+                if (t.textContent === (trackId + '×')) {
+                    t.remove();
+                }
+            });
+            e.target.value = '';
+            document.querySelector('#fake-track-ids-block').appendChild(trackIdItem);
+            trackIdItem.querySelector('.remove-track-id').addEventListener('click', function (e) {
+                e.target.parentNode.remove();
+            });
+            document.querySelector("input#fake-search-input").style.border = '1px solid';
+        }
+        e.preventDefault();
+    }
+}
+

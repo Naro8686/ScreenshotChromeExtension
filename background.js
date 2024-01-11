@@ -1,29 +1,22 @@
 const SCREENSHOT_SEND_URL = null;
+
 chrome.runtime.onInstalled.addListener(function (tab) {
     chrome.storage.sync.set({enabled: false});
 });
 
 chrome.action.onClicked.addListener(function (tab) {
-    chrome.storage.sync.get('enabled', function (data) {
-        chrome.tabs.sendMessage(tab.id, {text: !data.enabled ? 'enabled' : 'disabled'});
-        chrome.storage.sync.set({enabled: !data.enabled});
-        return false;
-    });
-    return false;
+    toggleEnabled(tab.id);
 });
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-    if (request.img) {
-        sendImg({img: request.img, current_url: request.current_url}).then(r => {
-            console.log(r);
+    var track_ids = request.track_ids ?? [];
+    if (request.img && track_ids.length) {
+        sendImg({img: request.img, current_url: request.current_url, track_ids: request.track_ids ?? []}).then(r => {
         });
     }
-
     if (request.hasOwnProperty('enabled')) {
-        chrome.storage.sync.set({enabled: request.enabled});
-        chrome.tabs.sendMessage(sender.tab.id, {text: request.enabled ? 'enabled' : 'disabled'});
+        toggleEnabled(sender.tab.id, request.enabled);
     }
-
     sendResponse();
 });
 
@@ -44,4 +37,13 @@ async function sendImg(data = {}) {
         console.error(error);
     }
     return null;
+}
+
+function toggleEnabled(tabId, state = null) {
+    chrome.storage.sync.get('enabled', function (data) {
+        const newState = state !== null ? state : !data.enabled;
+
+        chrome.tabs.sendMessage(tabId, {text: newState ? 'enabled' : 'disabled'});
+        chrome.storage.sync.set({enabled: newState});
+    });
 }
