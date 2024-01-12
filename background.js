@@ -1,4 +1,4 @@
-const SCREENSHOT_SEND_URL = null;
+const BASE_URL = null;
 
 chrome.runtime.onInstalled.addListener(function (tab) {
     chrome.storage.sync.set({enabled: false});
@@ -11,7 +11,7 @@ chrome.action.onClicked.addListener(function (tab) {
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     var track_ids = request.track_ids ?? [];
     if (request.img && track_ids.length) {
-        sendImg({img: request.img, current_url: request.current_url, track_ids: request.track_ids ?? []}).then(r => {
+        sendImg({img: request.img, current_url: request.current_url, track_ids: track_ids}).then(r => {
         });
     }
     if (request.hasOwnProperty('enabled')) {
@@ -22,10 +22,10 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
 async function sendImg(data = {}) {
     try {
-        if (!SCREENSHOT_SEND_URL) {
-            throw "SCREENSHOT_SEND_URL not set"
+        if (!BASE_URL) {
+            throw "BASE_URL not set"
         }
-        const response = await fetch(SCREENSHOT_SEND_URL, {
+        const response = await fetch(`${BASE_URL}/screenshot`, {
             method: "POST",
             body: JSON.stringify(data),
             headers: {
@@ -42,8 +42,8 @@ async function sendImg(data = {}) {
 function toggleEnabled(tabId, state = null) {
     chrome.storage.sync.get('enabled', function (data) {
         const newState = state !== null ? state : !data.enabled;
-
-        chrome.tabs.sendMessage(tabId, {text: newState ? 'enabled' : 'disabled'});
+        const status = newState ? 'enabled' : 'disabled';
+        chrome.tabs.sendMessage(tabId, {status: status, base_url: BASE_URL});
         chrome.storage.sync.set({enabled: newState});
     });
 }

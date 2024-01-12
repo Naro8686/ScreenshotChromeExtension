@@ -9,25 +9,18 @@ if (performance.navigation.type === performance.navigation.TYPE_RELOAD) {
 }
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-    var tabId = sender.tab?.id;
-    var isEnabled = request.text === 'enabled';
+    const BASE_URL = request.base_url;
+    var isEnabled = request.status === 'enabled';
     var overlay = document.getElementById("fake-screenshot-overlay");
     var searchBlock = document.getElementById("fake-search-block");
     var buttons = document.getElementById("fake-screenshot-buttons");
     if (!overlay) {
         overlay = document.createElement("div");
         overlay.id = 'fake-screenshot-overlay';
-        overlay.style.cssText = 'display: none;\n' + 'position: fixed;\n' + '            top: 0;\n' + '            left: 0;\n' + '            width: 100%;\n' + '            height: 100%;\n' + '            background-color: rgba(0, 0, 0, 0.5);\n' + '            z-index: 999999;' + '            cursor: crosshair;';
+        overlay.style.cssText = 'display: none;position: fixed;top: 0;left: 0; width: 100%;height: 100%;background-color: rgba(0, 0, 0, 0.5);z-index: 999999;cursor: crosshair;';
         document.body.appendChild(overlay);
     }
     overlay.style.display = isEnabled ? "block" : "none";
-    if (!searchBlock) {
-        searchBlock = document.createElement("div");
-        searchBlock.id = "fake-search-block";
-        searchBlock.style.cssText = 'display: none;\n' + '    position: absolute;\n' + '    z-index: 1000000;\n' + '    display: block;\n' + '    right: 5px;\n' + '    top: 5px;\n' + '    background: #a4b8c1;\n' + '    border: 1px #646262 solid;\n' + '    padding: 10px;\n' + '    border-radius: 3px;' + '    cursor: default;' + '    width: 250px;' + '';
-        document.body.appendChild(searchBlock);
-    }
-    searchBlock.style.display = isEnabled ? "block" : "none";
     if (!buttons) {
         buttons = document.createElement("div");
         buttons.id = "fake-screenshot-buttons";
@@ -39,15 +32,33 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         canvas = document.createElement("canvas");
         overlay.appendChild(canvas);
     }
+
+    if (!searchBlock) {
+        searchBlock = document.createElement("div");
+        searchBlock.id = "fake-search-block";
+        searchBlock.style.cssText = 'display: none;position: absolute;z-index: 1000000;right: 5px;top: 5px;background: #a4b8c1;border: 1px #646262 solid;padding: 10px;border-radius: 3px;cursor: default;width: 250px;';
+        document.body.appendChild(searchBlock);
+    }
+    searchBlock.style.display = isEnabled ? "block" : "none";
+
     var searchInput = searchBlock.querySelector("input#fake-search-input");
     if (!searchInput) {
         searchInput = document.createElement("input");
         searchInput.type = "search";
         searchInput.id = "fake-search-input";
         searchInput.placeholder = "Напишите трек ид";
-        searchInput.style.cssText = "  width: 100%; \n" + "  background-color: white; \n" + "  color: black; \n" + "  border: 1px solid;" + "  padding: 5px;";
+        searchInput.style.cssText = "width: 100%;background-color: white;color: black;border: 1px solid;padding: 5px;";
         searchBlock.appendChild(searchInput);
     }
+
+    var fakesWaitingQrBlock = searchBlock.querySelector("#fakes-waiting-qr-block");
+    if (!fakesWaitingQrBlock) {
+        fakesWaitingQrBlock = document.createElement("div");
+        fakesWaitingQrBlock.id = "fakes-waiting-qr-block";
+        fakesWaitingQrBlock.style.cssText = "width: 100%;margin-bottom: 15px;text-align: center;";
+        searchBlock.prepend(fakesWaitingQrBlock);
+    }
+
     var trackIdsBlock = searchBlock.querySelector("#fake-track-ids-block");
     if (!trackIdsBlock) {
         trackIdsBlock = document.createElement("div");
@@ -55,20 +66,22 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         trackIdsBlock.style.cssText = "width: 100%;margin-top: 15px;";
         searchBlock.appendChild(trackIdsBlock);
     }
+
     var screenshotBtn = buttons.querySelector("button#fake-screenshot-screenshotBtn");
     if (!screenshotBtn) {
         screenshotBtn = document.createElement("button");
         screenshotBtn.id = "fake-screenshot-screenshotBtn";
         screenshotBtn.textContent = "Сделать скриншот";
-        screenshotBtn.style.cssText = "margin-right: 10px;" + "  background-color: white; \n" + "  color: black; \n" + "  border: 1px solid;" + "  text-align: center;\n" + "  text-decoration: none;\n" + "  cursor: pointer;" + "  padding: 5px;" + "  margin-bottom: 5px;";
+        screenshotBtn.style.cssText = "margin-right: 10px;background-color: white; color: black; border: 1px solid;text-align: center;text-decoration: none;cursor: pointer;padding: 5px;margin-bottom: 5px;";
         buttons.appendChild(screenshotBtn);
     }
+
     var cancelBtn = buttons.querySelector("button#fake-screenshot-cancelBtn");
     if (!cancelBtn) {
         cancelBtn = document.createElement("button");
         cancelBtn.id = "fake-screenshot-cancelBtn";
         cancelBtn.textContent = "Отменить действие";
-        cancelBtn.style.cssText = "margin-right: 10px;" + "  background-color: white; \n" + "  color: black; \n" + "  border: 1px solid;" + "  text-align: center;\n" + "  text-decoration: none;\n" + "  cursor: pointer;" + "  padding: 5px;";
+        cancelBtn.style.cssText = "margin-right: 10px;background-color: white; color: black; border: 1px solid;text-align: center;text-decoration: none;cursor: pointer;padding: 5px;";
         buttons.appendChild(cancelBtn);
     }
 
@@ -128,6 +141,17 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
                 x: Math.min(startX, endX), y: Math.min(startY, endY), width: Math.abs(width), height: Math.abs(height)
             };
             localStorage.setItem("screenshotData", JSON.stringify(screenshotData));
+        });
+        getFakesWaitingQr(`${BASE_URL}/screenshot`).then(function (fakes) {
+            fakesWaitingQrBlock.innerHTML = fakes.length ? '<p>В ожидание QR</p>' : '<p>Ожидаемых QR нет</p>';
+            fakes.forEach((fake) => {
+                fakesWaitingQrBlock.innerHTML += `<div><a href="#" class="fakes-waiting-qr-item" data-track-id="${fake.track_id}">${fake.track_id}</a> - ${fake.tg_account}</div>`;
+            });
+            fakesWaitingQrBlock
+                .querySelectorAll('.fakes-waiting-qr-item')
+                .forEach(element => {
+                    element.addEventListener('click', addTrackId);
+                });
         });
     } else {
         document.body.removeChild(overlay);
@@ -223,12 +247,13 @@ function switcher(enabled) {
 }
 
 function addTrackId(e) {
-    if (e.keyCode < 48 || e.keyCode > 57) {
+    if (e.type !== 'click' && (e.keyCode < 48 || e.keyCode > 57)) {
         e.preventDefault();
     }
-    if (e.target?.id === 'fake-search-input' && (e.which === 13 || e.keyCode === 13)) {
-        if (e.target?.value) {
-            let trackId = e.target.value.replace(/\s*$/, "").toLowerCase();
+    if (e.type === 'click' || (e.target?.id === 'fake-search-input' && (e.which === 13 || e.keyCode === 13))) {
+        let trackId = e.type === 'click' ? e.target.dataset.trackId : e.target?.value;
+        if (trackId) {
+            trackId = trackId.replace(/\s*$/, "").toLowerCase();
             let trackIdItem = document.createElement('div');
             trackIdItem.className = 'track-id-item'
             trackIdItem.style.cssText = 'display: inline-block;\n' +
@@ -259,5 +284,23 @@ function addTrackId(e) {
         }
         e.preventDefault();
     }
+}
+
+
+async function getFakesWaitingQr(url, body = null) {
+    try {
+        const response = await fetch(url, {
+            method: "GET",
+            body: body,
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+
+        return response.json();
+    } catch (error) {
+        console.error(error);
+    }
+    return [];
 }
 
