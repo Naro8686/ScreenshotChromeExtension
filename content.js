@@ -55,7 +55,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (!fakesWaitingQrBlock) {
         fakesWaitingQrBlock = document.createElement("div");
         fakesWaitingQrBlock.id = "fakes-waiting-qr-block";
-        fakesWaitingQrBlock.style.cssText = "width: 100%;margin-bottom: 15px;text-align: center;";
+        fakesWaitingQrBlock.style.cssText = "width: 100%;max-height: 150px;overflow-y: auto;margin-bottom: 15px;text-align: center;";
         searchBlock.prepend(fakesWaitingQrBlock);
     }
 
@@ -180,7 +180,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
                 if (overlay) overlay.style.display = "none";
                 captureScreenshot(screenshotData.x, screenshotData.y, screenshotData.width, screenshotData.height);
                 if (overlay) overlay.style.display = "block";
-            }, 2000)
+            }, 500)
         }
         return false;
     });
