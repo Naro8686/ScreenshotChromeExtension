@@ -36,7 +36,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (!searchBlock) {
         searchBlock = document.createElement("div");
         searchBlock.id = "fake-search-block";
-        searchBlock.style.cssText = 'display: none;position: absolute;z-index: 1000000;right: 5px;top: 5px;background: #a4b8c1;border: 1px #646262 solid;padding: 10px;border-radius: 3px;cursor: default;width: 250px;';
+        searchBlock.style.cssText = 'display: none;position: fixed;z-index: 1000000;right: 5px;top: 5px;background: #a4b8c1;border: 1px #646262 solid;padding: 10px;border-radius: 3px;cursor: default;width: 250px;';
         document.body.appendChild(searchBlock);
     }
     searchBlock.style.display = isEnabled ? "block" : "none";
@@ -180,7 +180,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
                 if (overlay) overlay.style.display = "none";
                 captureScreenshot(screenshotData.x, screenshotData.y, screenshotData.width, screenshotData.height);
                 if (overlay) overlay.style.display = "block";
-            }, 500)
+            }, 1200)
         }
         return false;
     });
